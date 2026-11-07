@@ -44,21 +44,22 @@ SmartDocFlow-X ingests manufacturing PDFs (digital or scanned), extracts structu
 
 ## Key Features
 
-- **Adaptive Ingestion** — Automatic OCR fallback for scanned PDFs with confidence scoring
-- **Multilingual Numeric Extraction** — Handles European formats (`240,5 V`), localized units (`Tage`, `jours`)
-- **Deterministic Numeric Guardrails** — Numbers are frozen before LLM migration, never generated
-- **Order-Invariant Snapshot Hashing** — SHA-256 fingerprint for audit traceability
-- **Position-Aware Drift Detection** — Fuzzy parameter matching prevents value-swapping errors
-- **Per-Unit Tolerance** — Domain-aware precision (`V ±0.01`, `°C ±0.1`, `days` exact)
-- **Hallucination Detection** — Flags numeric values injected by LLM not in source document
-- **Configurable Risk Scoring** — Tunable weights with Low/Medium/High classification
-- **OCR Confidence Thresholding** — Auto-caps risk for low-confidence scanned documents
+- **Adaptive Ingestion**: Automatic OCR fallback for scanned PDFs with confidence scoring
+- **Multilingual Numeric Extraction**: Handles European formats (`240,5 V`), localized units (`Tage`, `jours`)
+- **Deterministic Numeric Guardrails**: Numbers are frozen before LLM migration, never generated
+- **Order-Invariant Snapshot Hashing**: SHA-256 fingerprint for audit traceability
+- **Position-Aware Drift Detection**: Fuzzy parameter matching prevents value-swapping errors
+- **Per-Unit Tolerance**: Domain-aware precision (`V ±0.01`, `°C ±0.1`, `days` exact)
+- **Hallucination Detection**: Flags numeric values injected by LLM not in source document
+- **Configurable Risk Scoring**: Tunable weights with Low/Medium/High classification
+- **OCR Confidence Thresholding**: Auto-caps risk for low-confidence scanned documents
 
 ## Setup
 
 ```bash
 # Clone and enter project
-cd SmartDocFlow-x
+git clone https://github.com/Famulkalam/SmartDocFlow-X.git
+cd SmartDocFlow-X
 
 # Create virtual environment
 python3 -m venv venv
@@ -83,12 +84,33 @@ python tests/generate_test_pdfs.py
 
 # Run the Streamlit app
 streamlit run app.py
+
+# Run the offline test suite (no API key needed)
+pytest -q
 ```
+
+## Testing
+
+`tests/test_core.py` covers the deterministic parts of the pipeline without
+calling the OpenAI API: number and unit parsing (European decimals,
+thousands separators, negative values, `+/-` tolerances), per-unit
+tolerances, drift detection (matched, drifted, missing and injected values),
+integrity scoring and snapshot hashing.
+
+Writing these tests found and fixed three bugs in numeric extraction:
+
+- a number like `1200.5 V` was read as `200.5 V`
+- values in `%` were never extracted
+- negative values lost their sign (`-20.0 degrees C` became `20.0 °C`)
+
+A fourth fix makes drift detection label each value from its own line or
+sentence, so a changed value is reported as **drifted** rather than as one
+missing value plus one unexpected value.
 
 ## Project Structure
 
 ```
-SmartDocFlow-x/
+SmartDocFlow-X/
 ├── app.py                      # Streamlit interface
 ├── requirements.txt
 ├── .env.example
@@ -101,6 +123,7 @@ SmartDocFlow-x/
 │   ├── migration.py            # LLM migration + snapshot hashing
 │   └── drift_detection.py      # Drift detection + risk scoring
 └── tests/
+    ├── test_core.py            # Offline unit tests (pytest)
     ├── generate_test_pdfs.py   # Synthetic test document generator
     └── fixtures/               # Generated test PDFs
 ```
@@ -122,9 +145,14 @@ All tunable parameters are centralized in `src/config.py`:
 ## Known Limitations
 
 - **Thousands separators**: Basic support for `1,200.5 V` and `1.200,5 V`. Full European thousands-format disambiguation (e.g., ambiguity between `1.200` as "one point two hundred" vs "one thousand two hundred") is a documented edge case for future enhancement.
-- **Handwritten content**: Architecture supports flagging low-OCR-confidence documents for manual review. Full Vision-Language Model integration is planned for Phase 2.
+- **Handwritten content**: Low OCR confidence is flagged for manual review; handwriting is not otherwise supported.
+- **Test data**: The test PDFs are generated, not real supplier documents, and the end-to-end GPT-4o step has only been checked manually.
 - **Document formats**: Currently PDF-only. Extensible to `.docx` via `python-docx` and images via OCR.
 
 ## License
 
-MIT
+MIT, see [LICENSE](LICENSE).
+
+## Author
+
+Famul Kalam, MSc Business Analytics, University of Edinburgh.

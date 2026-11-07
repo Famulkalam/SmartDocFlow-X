@@ -1,5 +1,5 @@
 """
-SmartDocFlow-X — Numeric Drift Detection + Risk Scoring Engine
+SmartDocFlow-X: Numeric Drift Detection + Risk Scoring Engine
 Position-aware comparison with fuzzy parameter matching, per-unit tolerance,
 unexpected value injection detection, and weighted integrity scoring.
 """
@@ -74,6 +74,14 @@ def _infer_parameter_name(numeric: dict) -> str:
     Infer a parameter name from context for pre-migration numerics.
     Falls back to a value-unit descriptor.
     """
+    # Preferred: the same-line label captured at extraction time. The older
+    # context-window approach below could pull in text from previous lines
+    # ("Rated voltage: 240.5 V\nRated current"), so real drifts were reported
+    # as one missing value plus one unexpected value.
+    label = numeric.get("label")
+    if label:
+        return label
+
     context = numeric.get("context", "")
     # Try to extract a label from context (text before the number)
     if context:

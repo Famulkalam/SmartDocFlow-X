@@ -7,3 +7,4 @@ langdetect>=1.0.9
 streamlit>=1.32.0
 fpdf2>=2.7.0
 rapidfuzz>=3.6.0
+pytest>=8.0
